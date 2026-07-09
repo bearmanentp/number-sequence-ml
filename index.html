@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 수열 규칙 분석기</title>
-    <!-- TensorFlow.js 라이브러리 탑재 -->
+    <title>AI 수열 규칙 분석기 (고속 예측 버전)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <style>
         :root {
@@ -15,13 +14,9 @@
             --text-muted: #94a3b8;
             --border-color: #334155;
         }
-
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
-
+        *, *::before, *::after { box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
@@ -31,7 +26,6 @@
             align-items: center;
             min-height: 100vh;
         }
-
         .container {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -41,154 +35,72 @@
             max-width: 600px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
-
-        h2 {
-            margin-top: 0;
-            font-size: 24px;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        p.desc {
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--text-muted);
-        }
-
+        h2 { margin-top: 0; font-size: 24px; }
+        p.desc { color: var(--text-muted); font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
         input[type="text"], input[type="number"] {
-            width: 100%;
-            padding: 12px;
-            background-color: #0f172a;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-main);
-            font-size: 16px;
-            transition: border-color 0.2s;
+            width: 100%; padding: 12px; background-color: #0f172a;
+            border: 1px solid var(--border-color); border-radius: 8px;
+            color: var(--text-main); font-size: 16px;
         }
-
-        input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-        }
-
+        input:focus { outline: none; border-color: var(--accent-color); }
+        
+        .btn-group { display: flex; gap: 10px; }
         button {
-            width: 100%;
-            padding: 14px;
-            background-color: var(--accent-color);
-            color: #0f172a;
-            font-size: 16px;
-            font-weight: bold;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: opacity 0.2s;
+            flex: 1; padding: 14px; font-size: 16px; font-weight: bold;
+            border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s;
         }
-
-        button:hover {
-            opacity: 0.9;
-        }
-
-        button:disabled {
-            background-color: #475569;
-            color: #94a3b8;
-            cursor: not-allowed;
-        }
-
-        .status {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 14px;
-            color: var(--accent-color);
-            min-height: 20px;
-        }
-
+        #trainBtn { background-color: var(--accent-color); color: #0f172a; }
+        #predictBtn { background-color: #10b981; color: white; }
+        button:disabled { background-color: #475569; color: #94a3b8; cursor: not-allowed; }
+        
+        .status { margin-top: 20px; text-align: center; font-size: 14px; color: var(--accent-color); min-height: 20px; }
         .result-box {
-            margin-top: 25px;
-            padding: 20px;
-            background-color: #0f172a;
-            border-radius: 8px;
-            border-left: 4px solid var(--accent-color);
-            display: none;
+            margin-top: 25px; padding: 20px; background-color: #0f172a;
+            border-radius: 8px; border-left: 4px solid var(--accent-color); display: none;
         }
-
-        .result-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: var(--text-main);
-        }
-
-        .result-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #1e293b;
-            font-size: 14px;
-        }
-
-        .result-item:last-child {
-            border-bottom: none;
-        }
-
-        .result-label {
-            color: var(--text-muted);
-        }
-
-        .result-value {
-            font-weight: 600;
-        }
-
-        .highlight {
-            color: #34d399;
-            font-size: 18px;
-        }
+        .result-title { font-size: 16px; font-weight: bold; margin-bottom: 15px; }
+        .result-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 14px; }
+        .result-item:last-child { border-bottom: none; }
+        .result-label { color: var(--text-muted); }
+        .result-value { font-weight: 600; }
+        .highlight { color: #34d399; font-size: 18px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🧠 AI 수열 규칙 분석기</h2>
-    <p class="desc">등차 또는 선형 수열의 항들을 쉼표(,)로 구분해 넣고 학습 횟수를 지정해 보세요. 인공지능이 데이터 속에 숨겨진 수학적 규칙을 역추적합니다.</p>
+    <h2>🧠 AI 수열 규칙 분석기 (메모리 재사용)</h2>
+    <p class="desc">수열이나 학습 횟수가 변경되면 <b>[학습하기]</b>를 눌러야 합니다. 수열이 그대로라면 <b>[즉시 예측하기]</b>를 눌러 대기 없이 바로 결론을 뽑아낼 수 있습니다.</p>
 
     <div class="form-group">
         <label for="sequenceInput">수열 입력 (쉼표로 구분):</label>
-        <input type="text" id="sequenceInput" value="4, 7, 10, 13, 16">
+        <!-- 값이 바뀌면 모델을 재학습해야 하므로 상태를 리셋하는 이벤트(oninput) 추가 -->
+        <input type="text" id="sequenceInput" value="4, 7, 10, 13, 16" oninput="handleDataChange()">
     </div>
 
     <div class="form-group">
         <label for="epochInput">학습 횟수 (Epochs):</label>
-        <input type="number" id="epochInput" value="500" min="10" max="5000">
+        <input type="number" id="epochInput" value="500" min="10" max="5000" oninput="handleDataChange()">
     </div>
 
     <div class="form-group">
-        <label for="targetInput">예측할 항의 순서 (비워두면 다음 항자동 계산):</label>
-        <input type="number" id="targetInput" placeholder="예: 6">
+        <label for="targetInput">예측할 항의 순서:</label>
+        <input type="number" id="targetInput" placeholder="예: 6 (공백 시 다음 항)">
     </div>
 
-    <button id="runBtn" onclick="analyzeSequence()">🤖 수열 규칙 학습 및 예측하기</button>
+    <div class="btn-group">
+        <button id="trainBtn" onclick="trainModel()">🏋️ 1. 규칙 학습하기</button>
+        <button id="predictBtn" onclick="predictNext()" disabled>🔮 2. 즉시 예측하기</button>
+    </div>
 
-    <div id="statusMessage" class="status"></div>
+    <div id="statusMessage" class="status">수열 데이터를 입력하고 먼저 학습을 진행해 주세요.</div>
 
     <div id="resultBox" class="result-box">
         <div class="result-title">📊 AI 분석 리포트</div>
-        
         <div class="result-item">
-            <span class="result-label">입력된 데이터 패턴</span>
+            <span class="result-label">학습된 데이터 패턴</span>
             <span id="resPattern" class="result-value">-</span>
         </div>
         <div class="result-item">
@@ -207,52 +119,68 @@
 </div>
 
 <script>
-    async function analyzeSequence() {
-        const runBtn = document.getElementById('runBtn');
-        const statusMessage = document.getElementById('statusMessage');
-        const resultBox = document.getElementById('resultBox');
+    // 전역 변수로 모델과 학습 상태를 브라우저 메모리에 유지
+    let trainedModel = null; 
+    let currentTrainedData = ""; 
 
-        // 1. 입력 데이터 읽기 및 유효성 검사
+    // 입력 데이터가 변경되면 호출되는 함수
+    function handleDataChange() {
+        const inputStr = document.getElementById('sequenceInput').value;
+        const epochs = document.getElementById('epochInput').value;
+        const currentInput = `${inputStr}_${epochs}`;
+
+        // 현재 수열/학습횟수가 이전에 완료된 상태와 다르면 예측 버튼을 막고 학습을 유도
+        if (currentInput !== currentTrainedData) {
+            document.getElementById('predictBtn').disabled = true;
+            document.getElementById('statusMessage').innerText = "⚠️ 데이터가 변경되었습니다. 다시 [학습하기]를 눌러주세요.";
+            document.getElementById('statusMessage').style.color = "#f43f5e";
+        } else if (trainedModel) {
+            document.getElementById('predictBtn').disabled = false;
+            document.getElementById('statusMessage').innerText = "✅ 기존 학습 데이터를 재사용할 수 있습니다. 즉시 예측이 가능합니다.";
+            document.getElementById('statusMessage').style.color = "#10b981";
+        }
+    }
+
+    // 1. 모델을 생성하고 학습을 수행하는 함수
+    async function trainModel() {
+        const trainBtn = document.getElementById('trainBtn');
+        const predictBtn = document.getElementById('predictBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        statusMessage.style.color = "var(--accent-color)";
+
         const inputStr = document.getElementById('sequenceInput').value;
         const yData = inputStr.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
         const epochs = parseInt(document.getElementById('epochInput').value) || 500;
         
         if (yData.length < 2) {
             statusMessage.innerText = "⚠️ 숫자를 최소 2개 이상 입력해 주세요.";
+            statusMessage.style.color = "#f43f5e";
             return;
         }
 
-        // x 데이터 자동 생성 (1, 2, 3, 4, 5...)
         const xData = Array.from({length: yData.length}, (_, i) => i + 1);
 
-        // 예측할 타겟 X값 설정 (공백이면 마지막 입력 항의 다음 항)
-        let targetX = parseInt(document.getElementById('targetInput').value);
-        if (isNaN(targetX)) {
-            targetX = yData.length + 1;
+        // 기존 모델이 메모리에 있다면 삭제하여 리크 방지
+        if (trainedModel) {
+            trainedModel.dispose();
         }
 
-        // UI 락 및 진행 상황 표시
-        runBtn.disabled = true;
-        resultBox.style.display = "none";
-        statusMessage.innerText = `🏋️ AI 모델 생성 및 학습 중... (0 / ${epochs})`;
+        trainBtn.disabled = true;
+        predictBtn.disabled = true;
+        statusMessage.innerText = `🏋️ AI 모델 새로 학습 중... (0 / ${epochs})`;
 
-        // 2. TensorFlow.js 선형 회귀 신경망 빌드
+        // 모델 정의 및 컴파일
         const model = tf.sequential();
-        // 원 변수 1개를 받아 1개를 출력하는 Dense 레이어 추가
         model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
-
-        // 최적화 도구(sgd) 및 손실함수(MSE) 설정
         model.compile({ optimizer: tf.train.sgd(0.01), loss: 'meanSquaredError' });
 
-        // 데이터를 텐서 데이터 구조로 변환
         const xs = tf.tensor2d(xData, [xData.length, 1]);
         const ys = tf.tensor2d(yData, [yData.length, 1]);
 
-        // 3. 모델 학습 진행 (반복)
         await model.fit(xs, ys, {
             epochs: epochs,
             callbacks: {
-                onEpochEnd: (epoch, logs) => {
+                onEpochEnd: (epoch) => {
                     if ((epoch + 1) % 50 === 0 || epoch + 1 === epochs) {
                         statusMessage.innerText = `🏋️ AI 규칙 학습 중... (${epoch + 1} / ${epochs})`;
                     }
@@ -260,42 +188,60 @@
             }
         });
 
-        statusMessage.innerText = "🔮 학습 완료! 가중치 분석 및 최종 연산 중...";
+        // 텐서 메모리 해제 (모델은 남겨둠)
+        xs.dispose();
+        ys.dispose();
 
-        // 4. 모델로부터 가중치(w: 기울기, b: y절편) 추출하여 공식 유도
-        const weights = model.layers[0].getWeights();
+        // 전역 변수에 학습 완료된 모델과 상태 저장
+        trainedModel = model;
+        currentTrainedData = `${inputStr}_${epochs}`;
+
+        statusMessage.innerText = "✅ 학습 완료! 이제 오른쪽 [즉시 예측하기]를 누르면 대기 없이 바로 뽑힙니다.";
+        statusMessage.style.color = "#10b981";
+        
+        trainBtn.disabled = false;
+        predictBtn.disabled = false;
+
+        // 학습 직후 첫 예측 자동 수행
+        predictNext();
+    }
+
+    // 2. 학습된 모델을 사용해 0.001초만에 바로 뽑아내는 함수
+    async function predictNext() {
+        if (!trainedModel) return;
+
+        const resultBox = document.getElementById('resultBox');
+        const inputStr = document.getElementById('sequenceInput').value;
+        const yData = inputStr.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+
+        let targetX = parseInt(document.getElementById('targetInput').value);
+        if (isNaN(targetX)) {
+            targetX = yData.length + 1;
+        }
+
+        // 학습된 가중치(공식 계수) 실시간 추출
+        const weights = trainedModel.layers[0].getWeights();
         const weightW = (await weights[0].data())[0];
         const weightB = (await weights[1].data())[0];
 
-        // 사람이 읽기 쉬운 소수점 둘째자리 포맷의 공식 문자열 생성
         const formattedW = weightW.toFixed(2);
         const sign = weightB >= 0 ? '+' : '-';
         const formattedB = Math.abs(weightB).toFixed(2);
         const formulaString = `y = ${formattedW}x ${sign} ${formattedB}`;
 
-        // 5. 지정한 항에 대한 예측 연산 수행
-        const prediction = model.predict(tf.tensor2d([targetX], [1, 1]));
+        // 메모리에 상주하는 모델로 대기 없이 즉시 연산
+        const prediction = trainedModel.predict(tf.tensor2d([targetX], [1, 1]));
         const rawOutput = (await prediction.data())[0];
-        
-        // 요구사항 반영: 원시 소수점 값과 최종 반올림 정수 값 분리 처리
         const finalOutput = Math.round(rawOutput);
 
-        // 6. 리포트 UI 갱신 및 결과 노출
+        // UI에 출력
         document.getElementById('resPattern').innerText = `${yData.join(' → ')}`;
         document.getElementById('resFormula').innerText = formulaString;
         document.getElementById('resRaw').innerText = rawOutput.toFixed(6);
         document.getElementById('resFinal').innerText = `[${targetX}번째 항] = ${finalOutput}`;
 
-        statusMessage.innerText = "✅ 규칙 분석 완료!";
         resultBox.style.display = "block";
-
-        // 메모리 청소 (브라우저 누수 방지용 텐서 해제)
-        xs.dispose();
-        ys.dispose();
-        prediction.dispose();
-        model.dispose();
-
-        runBtn.disabled = false;
+        prediction.dispose(); // 예측용 임시 텐서만 청소
     }
 </script>
 

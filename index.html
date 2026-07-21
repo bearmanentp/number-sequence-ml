@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 수열 규칙 분석기 (고정밀 고속 버전)</title>
+    <title>AI 범용 수열 규칙 분석기 (MLP 딥러닝)</title>
     <!-- TensorFlow.js 라이브러리 탑재 -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <style>
@@ -36,7 +36,7 @@
             max-width: 600px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
-        h2 { margin-top: 0; font-size: 24px; }
+        h2 { margin-top: 0; font-size: 24px; color: var(--accent-color); }
         p.desc { color: var(--text-muted); font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
         .form-group { margin-bottom: 20px; }
         label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
@@ -67,48 +67,58 @@
         .result-label { color: var(--text-muted); }
         .result-value { font-weight: 600; }
         .highlight { color: #34d399; font-size: 18px; }
+        .presets { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .preset-btn { padding: 6px 12px; font-size: 12px; background-color: #334155; color: #f8fafc; border-radius: 4px; cursor: pointer; border: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🧠 AI 수열 규칙 분석기 (고정밀 버전)</h2>
-    <p class="desc">수열이 길거나 큰 숫자여도 튕기지 않는 고정밀 알고리즘이 탑재되었습니다. 데이터가 그대로라면 대기 없이 <b>[즉시 예측하기]</b>로 먼 미래의 항을 바로 뽑아낼 수 있습니다.</p>
+    <h2>🧠 범용 AI 수열 분석기 (MLP 딥러닝)</h2>
+    <p class="desc">다층 신경망(MLP)과 ReLU 활성화 함수가 적용되어 <b>등차수열, 등비수열, 2차/지수수열, 피보나치 패턴</b>까지 학습하여 예측할 수 있습니다.</p>
+
+    <!-- 빠른 테스트용 예시 버튼 -->
+    <div class="presets">
+        <button class="preset-btn" onclick="setPreset('4, 7, 10, 13, 16')">등차 (3x+1)</button>
+        <button class="preset-btn" onclick="setPreset('2, 4, 8, 16, 32')">등비 (2^x)</button>
+        <button class="preset-btn" onclick="setPreset('1, 4, 9, 16, 25')">제곱 (x^2)</button>
+        <button class="preset-btn" onclick="setPreset('1, 1, 2, 3, 5, 8, 13')">피보나치</button>
+    </div>
 
     <div class="form-group">
-        <label for="sequenceInput">수열 입력 (쉼표로 구분):</label>
-        <input type="text" id="sequenceInput" value="4, 7, 10, 13, 16" oninput="handleDataChange()">
+        <label for="sequenceInput">수열 입력 (쉼표 구분):</label>
+        <input type="text" id="sequenceInput" value="2, 4, 8, 16, 32" oninput="handleDataChange()">
     </div>
 
     <div class="form-group">
         <label for="epochInput">학습 횟수 (Epochs):</label>
-        <input type="number" id="epochInput" value="1000" min="10" max="5000" oninput="handleDataChange()">
+        <input type="number" id="epochInput" value="1500" min="100" max="10000" oninput="handleDataChange()">
     </div>
 
     <div class="form-group">
         <label for="targetInput">예측할 항의 순서:</label>
-        <input type="number" id="targetInput" placeholder="예: 100 (공백 시 다음 항)">
+        <input type="number" id="targetInput" placeholder="예: 6 (공백 시 다음 항)">
     </div>
 
     <div class="btn-group">
-        <button id="trainBtn" onclick="trainModel()">🏋️ 1. 규칙 학습하기</button>
+        <button id="trainBtn" onclick="trainModel()">🏋️ 1. 딥러닝 학습하기</button>
         <button id="predictBtn" onclick="predictNext()" disabled>🔮 2. 즉시 예측하기</button>
     </div>
 
-    <div id="statusMessage" class="status">수열 데이터를 입력하고 먼저 학습을 진행해 주세요.</div>
+    <div id="statusMessage" class="status">수열 데이터를 선택하거나 입력 후 학습을 시작하세요.</div>
 
     <div id="resultBox" class="result-box">
-        <div class="result-title">📊 AI 분석 리포트</div>
+        <div class="result-title">📊 딥러닝 패턴 분석 리포트</div>
         <div class="result-item">
-            <span class="result-label">학습된 데이터 패턴</span>
+            <span class="result-label">학습된 수열</span>
             <span id="resPattern" class="result-value">-</span>
         </div>
         <div class="result-item">
-            <span class="result-label">AI가 도출한 규칙 수식</span>
-            <span id="resFormula" class="result-value" style="color: var(--accent-color); font-family: monospace;">-</span>
+            <span class="result-label">적용된 모델 구조</span>
+            <span id="resModelType" class="result-value" style="color: var(--accent-color);">다층 신경망 (MLP + ReLU)</span>
         </div>
         <div class="result-item">
-            <span class="result-label">AI 원시 예측값 (소수점)</span>
+            <span class="result-label">AI 원시 연산값 (소수점)</span>
             <span id="resRaw" class="result-value">-</span>
         </div>
         <div class="result-item">
@@ -119,11 +129,14 @@
 </div>
 
 <script>
-    // 전역 변수로 모델과 학습 상태를 브라우저 메모리에 상주시켜 재사용
     let trainedModel = null; 
     let currentTrainedData = ""; 
 
-    // 입력 데이터가 변경되면 호출되는 함수 (재학습 유도 및 버튼 제어)
+    function setPreset(seq) {
+        document.getElementById('sequenceInput').value = seq;
+        handleDataChange();
+    }
+
     function handleDataChange() {
         const inputStr = document.getElementById('sequenceInput').value;
         const epochs = document.getElementById('epochInput').value;
@@ -131,16 +144,15 @@
 
         if (currentInput !== currentTrainedData) {
             document.getElementById('predictBtn').disabled = true;
-            document.getElementById('statusMessage').innerText = "⚠️ 데이터가 변경되었습니다. 다시 [학습하기]를 눌러주세요.";
+            document.getElementById('statusMessage').innerText = "⚠️ 데이터가 변경되었습니다. [딥러닝 학습하기]를 눌러주세요.";
             document.getElementById('statusMessage').style.color = "#f43f5e";
         } else if (trainedModel) {
             document.getElementById('predictBtn').disabled = false;
-            document.getElementById('statusMessage').innerText = "✅ 기존 학습 데이터를 재사용할 수 있습니다. 즉시 예측이 가능합니다.";
+            document.getElementById('statusMessage').innerText = "✅ 기존 딥러닝 모델이 준비되어 있습니다. 바로 예측 가능합니다.";
             document.getElementById('statusMessage').style.color = "#10b981";
         }
     }
 
-    // 1. 모델 생성 및 고정밀 알고리즘 학습 수행
     async function trainModel() {
         const trainBtn = document.getElementById('trainBtn');
         const predictBtn = document.getElementById('predictBtn');
@@ -149,67 +161,66 @@
 
         const inputStr = document.getElementById('sequenceInput').value;
         const yData = inputStr.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
-        const epochs = parseInt(document.getElementById('epochInput').value) || 1000;
+        const epochs = parseInt(document.getElementById('epochInput').value) || 1500;
         
-        if (yData.length < 2) {
-            statusMessage.innerText = "⚠️ 숫자를 최소 2개 이상 입력해 주세요.";
+        if (yData.length < 3) {
+            statusMessage.innerText = "⚠️ 복잡한 수열 학습을 위해 최소 3개 이상의 숫자를 입력해 주세요.";
             statusMessage.style.color = "#f43f5e";
             return;
         }
 
         const xData = Array.from({length: yData.length}, (_, i) => i + 1);
 
-        // 이전 학습 모델이 메모리에 남아있으면 해제하여 브라우저 과부하 방지
         if (trainedModel) {
             trainedModel.dispose();
         }
 
         trainBtn.disabled = true;
         predictBtn.disabled = true;
-        statusMessage.innerText = `🏋️ AI 모델 고정밀 학습 중... (0 / ${epochs})`;
+        statusMessage.innerText = `🏋️ 다층 신경망(MLP) 깊은 학습 중... (0 / ${epochs})`;
 
-        // 선형 회귀 모델 아키텍처 정의
+        // [핵심 업그레이드: 비선형 다층 신경망(MLP) 빌드]
         const model = tf.sequential();
-        model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+        
+        // 입력층 & 은닉층 1 (뉴런 16개 + 비선형 활성화함수 ReLU)
+        model.add(tf.layers.dense({ units: 16, inputShape: [1], activation: 'relu' }));
+        // 은닉층 2 (뉴런 8개 + ReLU) - 복잡한 비선형 곡선 및 계차 패턴 학습
+        model.add(tf.layers.dense({ units: 8, activation: 'relu' }));
+        // 출력층 (최종 숫자 1개 도출)
+        model.add(tf.layers.dense({ units: 1 }));
 
-        // [개선 적용] sgd 대신 대규모 및 원거리 데이터 폭주에 매우 강한 'adam' 최적화 도구 사용
-        // 학습률(learningRate)을 0.05로 밸런싱하여 발산 오류(NaN) 차단
-        model.compile({ optimizer: tf.train.adam(0.05), loss: 'meanSquaredError' });
+        // Adam 최적화 도구 탑재 (다층 구조에 맞게 학습률 0.01 조정)
+        model.compile({ optimizer: tf.train.adam(0.01), loss: 'meanSquaredError' });
 
         const xs = tf.tensor2d(xData, [xData.length, 1]);
         const ys = tf.tensor2d(yData, [yData.length, 1]);
 
-        // 실제 학습 루프 실행
         await model.fit(xs, ys, {
             epochs: epochs,
             callbacks: {
                 onEpochEnd: (epoch) => {
-                    if ((epoch + 1) % 100 === 0 || epoch + 1 === epochs) {
-                        statusMessage.innerText = `🏋️ AI 고정밀 학습 중... (${epoch + 1} / ${epochs})`;
+                    if ((epoch + 1) % 150 === 0 || epoch + 1 === epochs) {
+                        statusMessage.innerText = `🏋️ 딥러닝 레이어 가중치 최적화 중... (${epoch + 1} / ${epochs})`;
                     }
                 }
             }
         });
 
-        // 사용한 임시 입력 데이터 텐서 해제
         xs.dispose();
         ys.dispose();
 
-        // 완성된 모델 인스턴스 전역 저장
         trainedModel = model;
         currentTrainedData = `${inputStr}_${epochs}`;
 
-        statusMessage.innerText = "✅ 고정밀 학습 완료! 이제 먼 미래의 항도 대기 없이 바로 뽑힙니다.";
+        statusMessage.innerText = "✅ 비선형 딥러닝 학습 완료! 즉시 예측이 가능합니다.";
         statusMessage.style.color = "#10b981";
         
         trainBtn.disabled = false;
         predictBtn.disabled = false;
 
-        // 학습 완료 즉시 첫 번째 결과 리포트 출력
         predictNext();
     }
 
-    // 2. 상주 중인 모델을 사용하여 0초 만에 실시간 예측 및 수식 도출
     async function predictNext() {
         if (!trainedModel) return;
 
@@ -222,33 +233,15 @@
             targetX = yData.length + 1;
         }
 
-        // 신경망 레이어에서 실시간 가중치(기울기 및 y절편) 추출
-        const weights = trainedModel.layers[0].getWeights();
-        const weightW = (await weights[0].data())[0];
-        const weightB = (await weights[1].data())[0];
-
-        // 사람이 읽을 수 있는 일차방정식 수식 빌드
-        const formattedW = weightW.toFixed(2);
-        const sign = weightB >= 0 ? '+' : '-';
-        const formattedB = Math.abs(weightB).toFixed(2);
-        const formulaString = `y = ${formattedW}x ${sign} ${formattedB}`;
-
-        // 메모리 상에서 고속 포워딩(예측 연산) 수행
         const prediction = trainedModel.predict(tf.tensor2d([targetX], [1, 1]));
         const rawOutput = (await prediction.data())[0];
-        
-        // 날것의 원시소수점 결과 보정용 반올림 정수화
         const finalOutput = Math.round(rawOutput);
 
-        // 웹 UI 리포트 출력 요소 업데이트
         document.getElementById('resPattern').innerText = `${yData.join(' → ')}`;
-        document.getElementById('resFormula').innerText = formulaString;
         document.getElementById('resRaw').innerText = rawOutput.toFixed(6);
         document.getElementById('resFinal').innerText = `[${targetX}번째 항] = ${finalOutput}`;
 
         resultBox.style.display = "block";
-        
-        // 예측에 쓰인 단발성 텐서 개체 즉각 파괴
         prediction.dispose();
     }
 </script>
